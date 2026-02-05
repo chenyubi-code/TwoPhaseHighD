@@ -1,3 +1,5 @@
+### Scenario: Linear, P(R=1)=0.05, rho=0 ####################################################################################
+
 library(MASS)
 library(gam)
 library(nleqslv)
@@ -109,5 +111,3 @@ simulation_results <- list(
   Two_stage_coef = Two_stage_coef,
   Two_stage_auc = Two_stage_auc
 )
-
-save(simulation_results,file="Example_Run.RData")
