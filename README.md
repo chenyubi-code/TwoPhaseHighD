@@ -12,3 +12,5 @@ Provides functions for calculating AUC estimates and their asymptotic variances 
 
 4. **Example_Run.R**
 Demonstrates how to generate a simulation dataset, estimate log-odds ratios and AUC using both the proposed method and the two-stage benchmark model, and obtain the asymptotic variances of the log-odds ratios and AUC from the proposed method.
+
+**Note**: The simulation may take a long time to complete.
