@@ -44,7 +44,7 @@ gamma_logOR <- c(X_logOR,Z_logOR)
 # number of simulation iterations
 m <- 1000
 # number of folds for cross-fitting
-nfold=2
+nfold <- 2
 # set the intercepts for Phase I and II model
 gamma_0 <- -2.102
 tao_00 <- -11.23
