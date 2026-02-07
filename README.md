@@ -11,10 +11,11 @@ Includes functions for estimating the log-odds ratios and their asymptotic varia
 Provides functions for calculating AUC estimates and their asymptotic variances using the proposed method, along with functions for computing AUC estimates for the two-stage model (benchmark).
 
 4. **Simulation_Run**<br>
-Inculdes all scenarios in the simulation studies:<br>
-(1) Missingness mechanisms: linear, single-index(Single), simple random sampling(SRS)<br>
-(2) Availability of Z (P(R=1)): 0.05 or 0.2<br>
-(3) correlation when generating data: 0, 0.3 or 0.5<br>
-Each file corresponds to one scenario, which demonstrates how to generate a simulation dataset, estimate log-odds ratios and AUC using both the proposed method and the two-stage benchmark model, and obtain the asymptotic variances of the log-odds ratios and AUC from the proposed method.
+This folder contains all simulation scenarios considered in the study. The scenarios vary according to the following design factors:<br>
+   (1) **Missingness mechanism:** Linear, Single-index (Single), Simple Random Sampling (SRS)<br>
+   (2) **Availability of Z:** 0.05 or 0.2<br>
+   (3) **Correlation used in data generation:** 0, 0.3 or 0.5<br>
+Each file corresponds to a specific simulation scenario. The scripts demonstrate how to generate simulation datasets, estimate log-odds ratios and AUC using both the proposed method and the two-stage benchmark model, and obtain the asymptotic variances of the log-odds ratios and AUC from the proposed method.
+
 
 **Note**: The simulation may take a long time to complete.
