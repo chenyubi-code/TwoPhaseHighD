@@ -10,7 +10,9 @@ Includes functions for estimating the log-odds ratios and their asymptotic varia
 3. **Model_Evaluation.R**<br>
 Provides functions for calculating AUC estimates and their asymptotic variances using the proposed method, along with functions for computing AUC estimates for the two-stage model (benchmark).
 
-4. **Example_Run.R**
+4. **Simulation_Run**
+Inculdes all scenarios in the simulation studies:
+(1) Missingness Mechanisms: linear, single-index(Single), simple random sampling(SRS), 
 Demonstrates how to generate a simulation dataset, estimate log-odds ratios and AUC using both the proposed method and the two-stage benchmark model, and obtain the asymptotic variances of the log-odds ratios and AUC from the proposed method.
 
 **Note**: The simulation may take a long time to complete.
