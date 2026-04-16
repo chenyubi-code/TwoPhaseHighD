@@ -255,3 +255,28 @@ Dat_fullauc <- function(yhat) {
   
   return(list(auc=auc,tpr_05=tpr_05,fpr_05=fpr_05))
 }
+
+# For two-stage model (super learner)
+Dat_auc_SL <- function(data,plFit_list) {
+  yhat.pl <- plFit_list$yhat.pl
+  fhat.pl <- plFit_list$fhat.pl
+  
+  # calculate the AUC
+  denom_tpr.pl <- sum(yhat.pl*fhat.pl)
+  denom_fpr.pl <- sum((1-yhat.pl)*fhat.pl)
+  c <- c(seq(0, 1, by=0.01)*max(yhat.pl*data$R),1)
+  num_tpr.pl <- numeric(length(c))
+  num_fpr.pl <- numeric(length(c))
+  
+  for (j in 1:length(c)){
+    ind <- (yhat.pl>=c[j])
+    num_tpr.pl[j] <- sum((yhat.pl*fhat.pl)[ind==1])
+    num_fpr.pl[j] <- sum(((1-yhat.pl)*fhat.pl)[ind==1])
+  }
+  
+  tpr.pl <- num_tpr.pl/denom_tpr.pl
+  fpr.pl <- num_fpr.pl/denom_fpr.pl
+  auc <- valid_auc(fpr.pl, tpr.pl)
+  
+  return(list(auc=auc))
+}
