@@ -8,7 +8,7 @@ Contains the main function and helper functions used to generate and format the 
 Includes functions for estimating the log-odds ratios and their asymptotic variances using the proposed method, as well as functions for estimating log-odds ratios using the two-stage model (benchmark) and complete-case (CC) analysis.
 
 3. **Model_Evaluation.R**<br>
-Provides functions for calculating AUC estimates and their asymptotic variances using the proposed method, along with functions for computing AUC estimates for the two-stage model (benchmark).
+Provides functions for calculating AUC estimates and their asymptotic variances using the proposed method, along with functions for computing AUC estimates for the two-stage model (benchmark) and complete-case (CC) analysis.
 
 4. **Simulation_Run**<br>
 This folder contains all simulation scenarios considered in the study. The scenarios vary according to the following design factors:<br>
