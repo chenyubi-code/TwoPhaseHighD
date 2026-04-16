@@ -234,7 +234,7 @@ Dat_auc_PL_var <- function(data,plFit_list) {
   return(list(auc=auc,var=var_auc_pl,h_auc=h_auc))
 }
 
-# For two-stage model (benchmark)
+# For two-stage model (benchmark or CC)
 Dat_fullauc <- function(yhat) {
   # calculate AUC 
   c <- c(seq(0, 1, by=0.01)*max(yhat),1)
