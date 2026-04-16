@@ -5,7 +5,7 @@ This repository provides the code required to reproduce the simulation results p
 Contains the main function and helper functions used to generate and format the simulated data.
 
 2. **Model_Estimation.R**<br>
-Includes functions for estimating the log-odds ratios and their asymptotic variances using the proposed method, as well as functions for estimating log-odds ratios using the two-stage model (benchmark).
+Includes functions for estimating the log-odds ratios and their asymptotic variances using the proposed method, as well as functions for estimating log-odds ratios using the two-stage model (benchmark) and complete-case (CC) analysis.
 
 3. **Model_Evaluation.R**<br>
 Provides functions for calculating AUC estimates and their asymptotic variances using the proposed method, along with functions for computing AUC estimates for the two-stage model (benchmark).
