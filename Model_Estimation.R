@@ -201,3 +201,68 @@ Dat_twostage_XZ <- function(data,X_gamma) {
   
   return(list(beta=coef_stageII,yhat=ystar))
 }
+
+Dat_twostage_CC <- function(data,stageI_fit) {
+  N <- nrow(data)
+  HighD_X <- as.matrix(data[c(1:dim_X)])
+  coef <- stageI_fit$fit
+  X_gamma <- stageI_fit$X_gamma
+  
+  prob_initial_Y1 <- stageI_fit$yhat.full
+  prob_initial_Y0 <- 1-prob_initial_Y1
+  
+  # score function for gamma
+  X1 <- as.matrix(cbind(rep(1,nrow(data)),data[1:(dim_X)]))
+  X1_A <- X1[,which(as.numeric(coef)!=0)]
+  dim_X_A <- ncol(X1_A)
+  S_gamma <- apply(cbind(data$Y,X1_A, prob_initial_Y1), 1, function(x) x[2:(dim_X_A+1)]*(x[1]-x[dim_X_A+2]))
+  
+  # Fisher information matrix for gamma
+  I_gamma <- solve(t(X1_A) %*% diag(as.vector(prob_initial_Y1*(prob_initial_Y0))) %*% X1_A/N)
+  
+  # influence function for gamma
+  h_gamma <-  I_gamma %*% S_gamma
+  
+  # fit the stage II model
+  Y <- data$Y
+  X_gamma <- as.numeric(X_gamma)
+  Z <- data[,(dim_X+1):(dim_X+dim_Z)]
+  tmp <- cbind(Y,X_gamma,Z)
+  mod_stageII <- glm(Y~.,family="binomial",data=tmp)
+  coef_stageII <- mod_stageII$coefficients
+  
+  # yscore.pl is equivalent to u_i
+  yscore <- predict(mod_stageII,type="response")
+  X_mat <- as.matrix(cbind(rep(1,nrow(data)),X_gamma,Z))
+  
+  # Calculate U for estimating equation
+  U <- apply(cbind(data$Y,X_mat, yscore), 1, function(x) x[2:(length(coef_stageII)+1)]*(x[1]-x[length(coef_stageII)+2]))
+  
+  # Calculate D_beta_inv
+  neg_D_beta_inv <- solve(t(X_mat) %*% diag(as.vector(yscore*(1-yscore))) %*% (X_mat)/N)
+  
+  gammader <- (coef)[which(as.numeric(coef)!=0)]
+  dgammaforjaco <- function(gammader) {
+    X_gamma_jaco <- X1_A%*%gammader
+    X_mat_jaco <- cbind(rep(1,nrow(data)),X_gamma_jaco,Z)
+    yhat_jaco <- exp(as.matrix(X_mat_jaco)%*%coef_stageII)/(1+exp(as.matrix(X_mat_jaco)%*%coef_stageII))
+    
+    #calculate score
+    big_U1 <- apply(cbind(data$Y,X_mat_jaco,yhat_jaco), 1, function(x) x[2:(length(coef_stageII)+1)]*(x[1]-x[length(coef_stageII)+2]))
+    mean_score <- rowMeans(big_U1)
+    return(mean_score)
+  }
+  
+  D_gamma <- jacobian(dgammaforjaco,gammader)
+  
+  
+  # ystar is equivalent to xi_i
+  ystar <- exp(X_mat%*%coef_stageII)/(1+exp(X_mat%*%coef_stageII))
+  
+  # Claculate influence function for beta
+  h_beta <- neg_D_beta_inv %*% (U + D_gamma %*% h_gamma)
+  var_coef <- diag(h_beta %*% t(h_beta)/N^2)
+  
+  return(list(beta=coef_stageII,yhat=ystar,h_beta=h_beta,var=var_coef,X_mat=X_mat,X1_A=X1_A,h_gamma=h_gamma,
+              gamma=gammader))
+}
