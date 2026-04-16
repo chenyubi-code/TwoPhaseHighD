@@ -266,3 +266,102 @@ Dat_twostage_CC <- function(data,stageI_fit) {
   return(list(beta=coef_stageII,yhat=ystar,h_beta=h_beta,var=var_coef,X_mat=X_mat,X1_A=X1_A,h_gamma=h_gamma,
               gamma=gammader))
 }
+
+SL_StageI <- function(data, SL.library) {
+  fold.ID <- sample(c(1:nfold), size=nrow(data), replace=TRUE)
+  pred <- rep(NA, nrow(data))
+  X_gamma <- rep(NA, nrow(data))
+  
+  # Sample-Splitting
+  for (i in 1:nfold) {
+    train_index <- which(fold.ID != i)
+    test_index <- which(fold.ID == i)
+    X_train <- data[train_index, 1:dim_X]
+    Y_train <- data$Y[train_index]
+    X_test <- data[test_index, 1:dim_X]
+    
+    # Train Super Learner
+    sl_fit <- SuperLearner(Y = Y_train, X = X_train, family = binomial(),
+                           SL.library = SL.library, 
+                           cvControl = list(V = 3), 
+                           method = "method.NNLS")
+    
+    sl_pred <- predict(sl_fit, newdata = X_test, onlySL = TRUE)$pred
+    pred[test_index] <- sl_pred
+  }
+  
+  # Logit Transformation
+  X_gamma <- qlogis(pred)
+  
+  return(list(yhat.full = pred, X_gamma = X_gamma))
+}
+
+SL_StageII <- function(data, fit_SL_StageI) {
+  N <- nrow(data)
+  X_gamma <- fit_SL_StageI$X_gamma
+  prob_initial_Y1 <- fit_SL_StageI$yhat.full
+  prob_initial_Y0 <- 1 - prob_initial_Y1
+  data <- cbind(data,prob_initial_Y1,prob_initial_Y0)
+  n <- ncol(data)
+  names(data)[n-1] <- "prob_initial_Y1"
+  names(data)[n] <- "prob_initial_Y0"
+  
+  # score function for gamma
+  X1 <- as.matrix(cbind(rep(1,nrow(data)),data[1:(dim_X)]))
+  
+  # create dataset of phase I cases and phase I controls
+  data_0 <- data[which(data$Y==0),]
+  data_1 <- data[which(data$Y==1),]
+  
+  # fit missingness model for cases and controls
+  f1_fit <- glm(R~bs(prob_initial_Y0,knots = (1-prob_y),Boundary.knots = c(0,1)),data=data_1,family=binomial)
+  f0_fit <- glm(R~bs(prob_initial_Y1,knots = prob_y,Boundary.knots = c(0,1)),data=data_0,family=binomial)
+  
+  # calculate predicted probabilities for offset
+  f1_hat <- predict(f1_fit,newdata=data,type="response")
+  f0_hat <- predict(f0_fit,newdata=data,type="response")
+  
+  # calculate X matrix for f1 and f0
+  Xmat_f1 <- cbind(rep(1,nrow(data)),bs(data$prob_initial_Y0,knots = (1-prob_y),Boundary.knots = c(0,1)))
+  Xmat_f0 <- cbind(rep(1,nrow(data)),bs(data$prob_initial_Y1,knots = prob_y,Boundary.knots = c(0,1)))
+  
+  # calculate score function for tau1 and tau0
+  S_tau1 <- apply(cbind(data$Y,data$R,Xmat_f1, f1_hat), 1, function(x) x[1]*x[3:(3+ncol(Xmat_f1)-1)]*(x[2]-x[(3+ncol(Xmat_f1))]))
+  S_tau0 <- apply(cbind((1-data$Y),data$R,Xmat_f0, f0_hat), 1, function(x) x[1]*x[3:(3+ncol(Xmat_f0)-1)]*(x[2]-x[(3+ncol(Xmat_f0))]))
+  
+  # A matrix for tau (derivative of score with respect to tau)
+  A_tau1 <- -solve(t(Xmat_f1) %*% diag(data$Y*as.vector(f1_hat*(1-f1_hat))) %*% (Xmat_f1)/N)
+  A_tau0 <- -solve(t(Xmat_f0) %*% diag((1-data$Y)*as.vector(f0_hat*(1-f0_hat))) %*% (Xmat_f0)/N)
+  
+  # estimating equation for our two phase method
+  XZ <- as.matrix(cbind(rep(1,nrow(data)),as.numeric(X_gamma),data[,(dim_X+1):(dim_X+dim_Z)]))
+  estequal <- function(x){
+    U <-  colSums(XZ*data$R*as.vector(data$Y - (exp(XZ%*%x)*as.vector(f1_hat/f0_hat))/(1 + exp(XZ%*%x)*as.vector(f1_hat/f0_hat))))
+    return(U)
+  }
+  
+  # solve the score function
+  inibeta=rep(0,dim_Z+2)
+  coef <- nleqslv(inibeta,estequal)$x
+  
+  # yscore.pl is equivalent to u_i
+  yscore.pl <- exp(XZ%*%coef)*as.vector(f1_hat/f0_hat)/(1+exp(XZ%*%coef)*as.vector(f1_hat/f0_hat))
+  
+  # Calculate U for estimating equation
+  U <- apply(cbind(data$R,data$Y,XZ, yscore.pl), 1, function(x) x[1]*x[3:(length(coef)+2)]*(x[2]-x[length(coef)+3]))
+  
+  # Calculate D_beta_inv
+  neg_D_beta_inv <- solve(t(data$R*XZ) %*% diag(as.vector(yscore.pl*(1-yscore.pl))) %*% (XZ)/N)
+  
+  # ystar.pl is equivalent to xi_i
+  ystar.pl <- exp(XZ%*%coef)/(1+exp(XZ%*%coef))
+  
+  # Calculate D_tau1 and D_tau0
+  D_tau1 <- t(data$R*XZ) %*% diag(as.vector(-yscore.pl*(1-yscore.pl)*(1-f1_hat))) %*% (Xmat_f1)/N
+  D_tau0 <- t(data$R*XZ) %*% diag(as.vector(yscore.pl*(1-yscore.pl)*(1-f0_hat))) %*% (Xmat_f0)/N
+  
+  # estimate of f(x,z)
+  fhat.pl <- (data$R)/(as.vector(f1_hat)*ystar.pl+as.vector(f0_hat)*(1-ystar.pl))/N
+  
+  return(list(beta.pl=coef,yhat.pl=ystar.pl,fhat.pl=fhat.pl))
+}
