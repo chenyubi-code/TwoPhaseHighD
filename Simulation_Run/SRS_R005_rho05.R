@@ -45,6 +45,14 @@ m <- 1000
 nfold <- 2
 # set the intercepts for Phase I and II model
 gamma_0 <- -2.078
+# superlearner libraries
+SL.library <- c(
+  "SL.glm",
+  "SL.glmnet",
+  "SL.randomForest",
+  "SL.rpart",      
+  "SL.nnet"         
+)
 
 ###################################################  Fit Models ######################################################### 
 
@@ -71,6 +79,17 @@ for (iter in 1:m) {
   two_stage_fit_list <- Dat_twostage_XZ(data.full, P1OnlyFit_List$X_gamma)
   two_stage_auc_list <- Dat_fullauc(two_stage_fit_list$yhat)
   
+  # CC: fit the two stage model for individuals with Z available
+  data.P2 <- data.full[which(data.full$R == 1),]
+  P2OnlyFit_List <- Dat_adaLasso_crossfit(data.P2)
+  P2Fit_list <- Dat_twostage_CC(data.P2, P2OnlyFit_List)
+  P2auc_list <- Dat_fullauc(P2Fit_list$yhat)
+  
+  # Super Learner
+  P1_SL_List <- SL_StageI(data.full, SL.library)
+  plFit_SL <- SL_StageII(data.full, P1_SL_List)
+  plauc_SL <- Dat_auc_SL(data.full, plFit_SL)
+  
   results_list[[iter]] <- list(
     # Our Method Model
     coef = plFit_list$beta.pl,
@@ -79,7 +98,13 @@ for (iter in 1:m) {
     var_auc = plauc_list$var,
     # Benchmark: Two-stage Model
     two_stage_coef = two_stage_fit_list$beta,
-    two_stage_auc = two_stage_auc_list$auc
+    two_stage_auc = two_stage_auc_list$auc,
+    # CC
+    cc_coef = P2Fit_list$beta,
+    cc_auc = P2auc_list$auc,
+    # SuperLearner
+    sl_coef = plFit_SL$beta.pl,
+    sl_auc = plauc_SL$auc
   )
 }
 
@@ -89,6 +114,10 @@ Auc <- t(sapply(results_list, function(x) x$auc))
 Var_auc <- t(sapply(results_list, function(x) x$var_auc))
 Two_stage_coef <- t(sapply(results_list, function(x) x$two_stage_coef))
 Two_stage_auc <- t(sapply(results_list, function(x) x$two_stage_auc))
+CC_coef <- t(sapply(results_list, function(x) x$cc_coef))
+CC_auc <- t(sapply(results_list, function(x) x$cc_auc))
+SL_coef <- t(sapply(results_list, function(x) x$sl_coef))
+SL_auc <- t(sapply(results_list, function(x) x$sl_auc))
 
 simulation_results <- list(
   Coef = Coef,
@@ -96,5 +125,9 @@ simulation_results <- list(
   Auc = Auc,
   Var_auc = Var_auc,
   Two_stage_coef = Two_stage_coef,
-  Two_stage_auc = Two_stage_auc
+  Two_stage_auc = Two_stage_auc,
+  CC_coef = CC_coef,
+  CC_auc = CC_auc,
+  SL_coef = SL_coef,
+  SL_auc = SL_auc
 )
